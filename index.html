@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A silly 60-second game: shoo the pigeons away from your fries, but leave the friendly seagulls alone.">
+<meta name="theme-color" content="#e2463b">
+<title>Pigeon Panic</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one column; a sunny boardwalk play field is the hero. Single bright daytime look by choice. */
+:root{
+  --sky:#bfe3f2; --plank:#ecd9b0; --plank-2:#e2cb9b; --ink:#2b2233; --muted:#6f6577;
+  --red:#e2463b; --fry:#ffcf3f; --card:#fffaf0; --line:rgba(43,34,51,.14); --good:#3f8f5c;
+  --display:"Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+body{background:var(--card); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent}
+.app{max-width:560px; margin:0 auto; padding-block:18px 32px; display:flex; flex-direction:column; gap:16px; box-sizing:border-box}
+h1,h2,h3{font-family:var(--display); font-weight:400; margin:0; letter-spacing:.01em; text-wrap:balance}
+h1{font-size:2.6rem; line-height:1; color:var(--red)}
+h2{font-size:1.7rem; line-height:1.1}
+h3{font-size:1.15rem}
+p{margin:0}
+.muted{color:var(--muted)}
+.label{font-size:.72rem; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:700}
+.screen{display:flex; flex-direction:column; gap:16px}
+.stack{display:flex; flex-direction:column; gap:10px}
+.hero{display:flex; align-items:center; gap:14px}
+.hero svg{flex:none}
+.rules{display:grid; grid-template-columns:auto 1fr; gap:10px 12px; align-items:center}
+.rules .ic{width:46px; height:42px; display:flex; align-items:center; justify-content:center}
+.versus{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.vcard{border:3px solid var(--ink); border-radius:18px; padding:12px 10px 14px; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center}
+.vcard.yes{background:#e3f4e8}
+.vcard.no{background:#fde7e4}
+.vcard .birds{display:flex; align-items:flex-end; justify-content:center; gap:2px; min-height:84px}
+.vcard .tag{font-family:var(--display); font-size:1.35rem; line-height:1}
+.vcard.yes .tag{color:var(--good)}
+.vcard.no .tag{color:var(--red)}
+.vcard .sub{font-size:.85rem; line-height:1.3}
+.vcard .mark{width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:var(--display); font-size:1.2rem}
+.vcard.yes .mark{background:var(--good)}
+.vcard.no .mark{background:var(--red)}
+details.sci{border:2px solid var(--line); border-radius:16px; padding:14px 16px; background:#fff}
+details.sci summary{cursor:pointer; font-family:var(--display); font-size:1.15rem; list-style:none; display:flex; justify-content:space-between; align-items:center; gap:10px}
+details.sci summary::-webkit-details-marker{display:none}
+details.sci summary::after{content:"+"; color:var(--muted); font-family:var(--body); font-size:1.3rem}
+details.sci[open] summary::after{content:"–"}
+.sci-list{display:flex; flex-direction:column; gap:14px; margin-top:12px}
+.sci-item{display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px solid var(--line)}
+.sci-item .game{color:var(--red); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase}
+.sci-item .lim{color:var(--muted); font-size:.9rem}
+.sci-item .cite{font-size:.8rem; color:var(--muted)}
+.sci-item a{color:var(--ink)}
+.feel{display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
+.feel button{appearance:none; border:2px solid var(--line); background:#fff; color:var(--ink); border-radius:14px; font:inherit;
+  padding:10px 4px; font-size:.8rem; line-height:1.2; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer}
+.feel button .n{font-family:var(--display); font-size:1.3rem}
+.feel button[aria-pressed="true"]{border-color:var(--red); background:#fde7e4}
+.btn{appearance:none; border:0; border-radius:999px; padding:14px 24px; font-family:var(--display); font-size:1.2rem; letter-spacing:.02em; cursor:pointer;
+  background:var(--red); color:#fff; box-shadow:0 4px 0 #a92c23}
+.btn:active{transform:translateY(3px); box-shadow:0 1px 0 #a92c23}
+.btn.ghost{background:transparent; color:var(--ink); box-shadow:none; border:2px solid var(--line); font-family:var(--body); font-size:1rem; font-weight:700}
+.btn:disabled{opacity:.4; cursor:default}
+.row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+:focus-visible{outline:3px solid var(--fry); outline-offset:3px}
+
+/* HUD */
+.hud{display:flex; justify-content:space-between; align-items:flex-end; gap:10px; font-variant-numeric:tabular-nums}
+.hud > div{display:flex; flex-direction:column; gap:2px}
+.hud .v{font-family:var(--display); font-size:1.6rem; line-height:1}
+.hud .mid{align-items:center}
+.hud .r{align-items:flex-end}
+.mute{appearance:none; border:2px solid var(--line); background:#fff; border-radius:999px; padding:4px 10px; font:inherit; font-size:.8rem; font-weight:700; cursor:pointer; color:var(--ink)}
+
+/* Field */
+.field{position:relative; height:min(66dvh, 560px); min-height:360px; border-radius:24px; overflow:hidden; touch-action:manipulation;
+  user-select:none; -webkit-user-select:none; border:3px solid var(--ink);
+  background:
+    linear-gradient(var(--sky) 0 18%, #9fd1a8 18% 22%, transparent 22%),
+    repeating-linear-gradient(90deg, var(--plank) 0 46px, var(--plank-2) 46px 48px)}
+.field::after{content:""; position:absolute; left:0; right:0; top:22%; height:2px; background:rgba(43,34,51,.12); pointer-events:none}
+.sun{position:absolute; right:18px; top:12px; width:34px; height:34px; border-radius:50%; background:var(--fry); box-shadow:0 0 0 6px rgba(255,207,63,.35)}
+.bird{position:absolute; left:0; top:0; width:76px; height:74px; will-change:transform; cursor:pointer}
+.bird .flip{width:100%; height:100%}
+.bird.left .flip{transform:scaleX(-1)}
+.bird svg{display:block; width:100%; height:100%; overflow:visible}
+.bird svg *{transform-box:fill-box; transform-origin:center}
+.walk .bodyg{animation:waddle .32s ease-in-out infinite alternate}
+.walk .head{animation:bob .32s ease-in-out infinite alternate}
+.walk .legA{animation:step .32s ease-in-out infinite alternate}
+.walk .legB{animation:step .32s ease-in-out infinite alternate-reverse}
+.fly .wing{animation:flap .12s linear infinite alternate}
+.fly .legs{opacity:0}
+@keyframes waddle{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+@keyframes bob{from{transform:translateX(-3px)}to{transform:translateX(4px)}}
+@keyframes step{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+@keyframes flap{from{transform:rotate(-35deg) translateY(-6px)}to{transform:rotate(25deg)}}
+.beakfry{display:none}
+.hasfry .beakfry{display:inline}
+.say{position:absolute; left:50%; bottom:100%; transform:translateX(-50%); background:#fff; color:var(--ink); border:2px solid var(--ink);
+  border-radius:12px; padding:2px 8px; font-family:var(--display); font-size:.95rem; white-space:nowrap; opacity:0; transition:opacity .15s; pointer-events:none}
+.say.show{opacity:1}
+.carton{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); width:84px; height:96px; pointer-events:none; z-index:2000}
+.fries{position:absolute; left:8px; right:8px; bottom:46px; height:46px}
+.fries i{position:absolute; bottom:0; width:9px; border-radius:3px 3px 1px 1px; background:var(--fry); border:1.5px solid #c99a12; transform-origin:bottom center}
+.box{position:absolute; left:0; right:0; bottom:0; height:56px; background:var(--red); clip-path:polygon(0 0,100% 0,88% 100%,12% 100%); border-radius:4px}
+.box::after{content:""; position:absolute; left:22%; right:22%; top:16px; height:14px; border-radius:7px; background:#fff; opacity:.9}
+.carton.hit{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(calc(-50% - 5px))}75%{transform:translateX(calc(-50% + 5px))}}
+.banner{position:absolute; left:0; right:0; top:26%; text-align:center; font-family:var(--display); font-size:1.6rem; color:var(--ink);
+  -webkit-text-stroke:0; text-shadow:0 2px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff; opacity:0; transition:opacity .2s; pointer-events:none; z-index:3000}
+.banner.show{opacity:1}
+.overlay{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center;
+  padding:24px; background:rgba(255,250,240,.9); z-index:4000}
+.overlay p{max-width:30ch}
+
+/* Results */
+.stats{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+.stats > div{background:#fff; border:2px solid var(--line); border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:2px}
+.stats .v{font-family:var(--display); font-size:1.7rem; line-height:1.1; font-variant-numeric:tabular-nums}
+.rank{background:var(--fry); border:3px solid var(--ink); border-radius:18px; padding:14px 16px; display:flex; flex-direction:column; gap:4px}
+.rank h2{font-size:1.9rem}
+.hist{display:flex; flex-direction:column; gap:6px; font-size:.9rem; font-variant-numeric:tabular-nums}
+.hist div{display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid var(--line); padding-bottom:6px}
+
+@media (prefers-reduced-motion: reduce){
+  .walk .bodyg,.walk .head,.walk .legA,.walk .legB,.fly .wing{animation-duration:1.2s}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Intro -->
+  <section class="screen" id="intro">
+    <div class="hero">
+      <svg width="96" height="94" viewBox="-5 -18 90 88" aria-hidden="true" id="heroBird"></svg>
+      <div class="stack" style="gap:4px">
+        <div class="label">Stress Balls · Game 2</div>
+        <h1>Pigeon Panic</h1>
+      </div>
+    </div>
+    <p>You have one box of fries and the boardwalk pigeons have plans. Defend the fries for 60 seconds.</p>
+    <div class="versus" id="versus"></div>
+    <div class="rules" id="rules"></div>
+    <div class="stack">
+      <div class="label">Before you start, how do you feel?</div>
+      <div class="feel" id="feelPre"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="startBtn">Protect the fries</button>
+      <button class="btn ghost" id="skipBtn">Skip the question</button>
+    </div>
+    <details class="sci"><summary>The science behind it</summary><div class="sci-list"></div></details>
+  </section>
+
+  <!-- Play -->
+  <section class="screen" id="play" hidden>
+    <div class="hud">
+      <div><span class="label">Score</span><span class="v" id="hScore">0</span></div>
+      <div class="mid"><span class="label">Fries</span><span class="v" id="hFries">10</span></div>
+      <div class="r"><span class="label">Time</span><span class="v" id="hTime">60</span></div>
+    </div>
+    <div class="field" id="field">
+      <div class="sun"></div>
+      <div class="carton" id="carton"><div class="fries" id="fries"></div><div class="box"></div></div>
+      <div class="banner" id="banner"></div>
+      <div class="overlay" id="overlay" hidden></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <span class="muted" style="font-size:.85rem">Tap pigeons. Not seagulls.</span>
+      <button class="mute" id="muteBtn" aria-pressed="false">Sound on</button>
+    </div>
+  </section>
+
+  <!-- Feel after -->
+  <section class="screen" id="after" hidden>
+    <div class="label">The pigeons have retreated. For now.</div>
+    <h2>How do you feel now?</h2>
+    <div class="feel" id="feelPost"></div>
+    <div class="row"><button class="btn" id="seeBtn" disabled>See how I did</button></div>
+  </section>
+
+  <!-- Results -->
+  <section class="screen" id="results" hidden>
+    <div class="rank">
+      <span class="label" style="color:var(--ink)">Your title</span>
+      <h2 id="rRank">Fry Guardian</h2>
+      <p id="rRankLine"></p>
+    </div>
+    <p id="rFeel"></p>
+    <div class="stats">
+      <div><span class="label">Score</span><span class="v" id="rScore">0</span></div>
+      <div><span class="label">Fries saved</span><span class="v" id="rFries">0</span></div>
+      <div><span class="label">Pigeons shooed</span><span class="v" id="rShoo">0</span></div>
+      <div><span class="label">Fancy pigeons</span><span class="v" id="rFancy">0</span></div>
+      <div><span class="label">Fries rescued</span><span class="v" id="rRescue">0</span></div>
+      <div><span class="label">Seagulls bothered</span><span class="v" id="rGull">0</span><span class="muted" style="font-size:.8rem" id="rSummon"></span></div>
+    </div>
+    <div class="row"><button class="btn" id="againBtn">Play again</button></div>
+    <details class="sci"><summary>The science behind it</summary><div class="sci-list"></div></details>
+    <div class="stack" id="histWrap" hidden>
+      <div class="label">Recent games on this phone</div>
+      <div class="hist" id="hist"></div>
+      <p class="muted" style="font-size:.8rem">Saved in this browser only. Clearing browsing data erases it.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+const GAME_SECONDS = 60, START_FRIES = 10;
+const FEELS = ["Very tense","Tense","Okay","Calm","Very calm"];
+const SQUAWKS = ["BRRRK!","COO?!","rude.","my fry!!","I have a family","*angry cooing*","ok ok OK","worth a shot","BOK? wrong bird","see you in 5 min","this isn't over","I'll tell my mom"];
+const FANCY = ["Unhand me, sir.","How dare you.","I'm a VIP!","Do you know who I am?","My hat!!","Most uncouth."];
+const GULL_HELLO = ["hello friend!","just passing thru :)","nice fries. not that I care","I come in peace","love the boardwalk today"];
+const GULL = ["We're friendly! Tapping us costs points","friend! that cost you 15","we're the good guys! -15","pigeons are the bad guys!","aww, you wanted to say hi? -15","friendly bird here! points gone","I'll get my friends to say hi","we're on YOUR side!","hugs not taps! -15","friendship costs 15 points"];
+const GULL_BANNERS = ["A seagull brought a friend to say hi.","More friendly seagulls are here to help.","The seagull welcome committee has arrived.","It's a seagull family reunion.","Every friendly seagull on the coast is here.","So. Many. Friends."];
+const THIEF = ["yoink","mine now","thank u","finders keepers","snack acquired"];
+const RESCUE = ["fine. FINE.","it was soggy anyway","ugh","you win this time"];
+const COMBO = {3:"Triple shoo!",5:"Pigeon whisperer!",8:"Fry Knight!",12:"Legend of the Boardwalk!",16:"The pigeons are writing songs about you"};
+const HATS = {
+  top:'<rect x="56" y="-12" width="16" height="14" rx="1" fill="#222"/><rect x="56" y="-2" width="16" height="3" fill="#e2463b"/><rect x="50" y="1" width="28" height="4" rx="2" fill="#222"/>',
+  party:'<path d="M57 4 L64 -17 L71 4 Z" fill="#e94f8a"/><path d="M60 -6 L68 -6 M58.5 -1 L69.5 -1" stroke="#fff" stroke-width="2"/><circle cx="64" cy="-17" r="3" fill="#ffcf3f"/>',
+  cowboy:'<path d="M57 3 q0 -13 7 -13 q7 0 7 13z" fill="#9b6431"/><path d="M48 3 q16 -7 32 0 q-16 6 -32 0z" fill="#7f4f22"/>',
+  crown:'<path d="M55 4 L56 -8 L60 -2 L64 -11 L68 -2 L72 -8 L73 4 Z" fill="#ffcf3f" stroke="#c99a12" stroke-width="1.5"/>'
+};
+function pigeonSVG(hat){
+  return '<g class="legs"><g class="legA"><path d="M34 50 L32 64 M27 64 h9" stroke="#e7768a" stroke-width="3" stroke-linecap="round" fill="none"/></g>'+
+    '<g class="legB"><path d="M46 50 L48 64 M44 64 h9" stroke="#e7768a" stroke-width="3" stroke-linecap="round" fill="none"/></g></g>'+
+    '<g class="bodyg"><path d="M12 32 L-3 27 L1 44 Z" fill="#6e7480"/>'+
+    '<ellipse cx="38" cy="38" rx="28" ry="17" fill="#9aa1ad"/>'+
+    '<g class="wing"><ellipse cx="33" cy="36" rx="18" ry="10" fill="#7c8390"/><path d="M28 30 q4 6 0 12 M35 30 q4 6 0 12" stroke="#5d636e" stroke-width="2" fill="none"/></g></g>'+
+    '<g class="head"><ellipse cx="59" cy="25" rx="9" ry="12" fill="#5f9384"/><ellipse cx="57" cy="27" rx="5" ry="8" fill="#8a6aa8" opacity=".6"/>'+
+    '<circle cx="64" cy="14" r="11" fill="#8c93a0"/><circle cx="67" cy="12" r="5.5" fill="#fff" stroke="#f08a2c" stroke-width="1.5"/>'+
+    '<circle cx="68.5" cy="12.5" r="2.6" fill="#111"/><path d="M74 14 L84 17 L74 20 Z" fill="#f2a33a"/>'+
+    '<rect class="beakfry" x="77" y="12" width="16" height="5" rx="1.5" fill="#ffcf3f" stroke="#c99a12" stroke-width="1"/>'+
+    (hat?HATS[hat]:'')+'</g>';
+}
+function gullSVG(){
+  return '<g class="legs"><g class="legA"><path d="M34 50 L32 64 M27 64 h9" stroke="#f2a33a" stroke-width="3" stroke-linecap="round" fill="none"/></g>'+
+    '<g class="legB"><path d="M46 50 L48 64 M44 64 h9" stroke="#f2a33a" stroke-width="3" stroke-linecap="round" fill="none"/></g></g>'+
+    '<g class="bodyg"><path d="M12 32 L-4 30 L2 42 Z" fill="#2b2b2b"/>'+
+    '<ellipse cx="38" cy="38" rx="28" ry="16" fill="#f7f7f4" stroke="#d9d9d4" stroke-width="1.5"/>'+
+    '<g class="wing"><ellipse cx="32" cy="34" rx="20" ry="9" fill="#a8b2bc"/><path d="M12 33 q4 -6 10 0" fill="#2b2b2b"/></g></g>'+
+    '<g class="head"><circle cx="62" cy="16" r="11" fill="#f7f7f4" stroke="#d9d9d4" stroke-width="1.5"/>'+
+    '<circle cx="66" cy="13" r="2.4" fill="#111"/><path d="M61 7 L70 10" stroke="#111" stroke-width="2.5" stroke-linecap="round"/>'+
+    '<path d="M72 15 L87 17 L86 20 L72 21 Z" fill="#f5c518"/><circle cx="82" cy="19.5" r="1.6" fill="#d33"/></g>';
+}
+
+const $ = id => document.getElementById(id);
+const field = $('field'), banner = $('banner'), overlay = $('overlay'), carton = $('carton');
+$('heroBird').innerHTML = pigeonSVG('top');
+const SCIENCE = [
+  {game:"Short casual games",
+   find:"A review of 28 studies found casual games like Tetris are a promising way to lower stress and anxiety. In several studies they beat sitting quietly or browsing the web. Fast action games tended to raise stress and arousal instead.",
+   lim:"The review called the evidence promising, not conclusive. Studies were small and mixed in quality.",
+   cite:"Pallavicini, Pepe & Mantovani (2021), JMIR Mental Health, 8(8), e28150",
+   url:"https://mental.jmir.org/2021/8/e28150"},
+  {game:"Tap pigeons, not seagulls",
+   find:"Tapping most things but holding back on a rare few is the setup of a standard attention test. It takes steady attention to avoid tapping out of habit, which keeps your mind on the game.",
+   lim:"That test measures attention. It has not been tested as a way to lower stress.",
+   cite:"Manly, Robertson, Galloway & Hawkins (1999), Neuropsychologia, 37, 661–670",
+   url:"https://www.mrc-cbu.cam.ac.uk/bibliography/articles/3860"}
+];
+document.querySelectorAll('details.sci .sci-list').forEach(list=>{
+  list.innerHTML = '<p class="muted" style="font-size:.9rem">This game was built for fun. It has some support from general research on casual games, but this game itself has not been tested in a study. The silly lines are just for laughs.</p>' +
+    SCIENCE.map(s=>'<div class="sci-item"><span class="game">'+s.game+'</span><p>'+s.find+'</p><p class="lim">Limit: '+s.lim+'</p><p class="cite"><a href="'+s.url+'" target="_blank" rel="noopener">'+s.cite+'</a></p></div>').join('');
+});
+const bigBird =(svg, w) => '<svg width="'+w+'" height="'+Math.round(w*.93)+'" viewBox="-5 -18 95 88" aria-hidden="true">'+svg+'</svg>';
+$('versus').innerHTML =
+  '<div class="vcard yes"><span class="mark" aria-hidden="true">✓</span><span class="tag">Tap pigeons</span>'+
+    '<div class="birds">'+bigBird(pigeonSVG(''), 70)+bigBird(pigeonSVG('top'), 70)+'</div>'+
+    '<span class="sub">Grey with a shiny green neck. Hats are worth extra.</span></div>'+
+  '<div class="vcard no"><span class="mark" aria-hidden="true">✕</span><span class="tag">Don\'t tap seagulls</span>'+
+    '<div class="birds">'+bigBird(gullSVG(), 84)+'</div>'+
+    '<span class="sub">White with a yellow beak. They\'re friendly.</span></div>';
+$('rules').innerHTML = [
+  [pigeonSVG(''), 'Tap pigeons to shoo them. 10 points.'],
+  [pigeonSVG('party'), 'Pigeons in hats are fancy. 25 points.'],
+  [gullSVG(), 'Seagulls are friendly. You get one free tap. After that, each tap costs 15 and more friendly seagulls show up. Lots more.'],
+  [pigeonSVG(''), 'If a pigeon grabs a fry, tap it to get the fry back.', true]
+].map(([svg, t, fry])=>'<span class="ic"><svg width="46" height="42" viewBox="-5 -18 95 88" aria-hidden="true" class="'+(fry?'hasfry':'')+'">'+svg+'</svg></span><span>'+t+'</span>').join('');
+
+let S, W = 0, H = 0, raf = 0, audio = null, muted = false;
+function reset(){
+  S = {pre:S?S.pre:null, post:null, phase:'intro', birds:[], score:0, fries:START_FRIES, time:GAME_SECONDS, elapsed:0,
+       nextSpawn:0.6, shoo:0, fancy:0, gull:0, rescue:0, stolen:0, combo:0, lastShoo:0, paused:false, last:0, reason:'',
+       gullIntro:false, gullWarned:false, gullQueue:0, queueT:0, summoned:0};
+}
+reset();
+const rand = (a,b) => a + Math.random()*(b-a);
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+function show(id){ ['intro','play','after','results'].forEach(s => $(s).hidden = s!==id); window.scrollTo(0,0); }
+
+function buildFeel(el, onPick){
+  el.innerHTML = '';
+  FEELS.forEach((f,i)=>{
+    const b = document.createElement('button'); b.type='button'; b.setAttribute('aria-pressed','false');
+    b.innerHTML = '<span class="n">'+(i+1)+'</span><span>'+f+'</span>';
+    b.onclick = ()=>{ [...el.children].forEach(c=>c.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); onPick(i+1); };
+    el.appendChild(b);
+  });
+}
+buildFeel($('feelPre'), v=>{ S.pre = v; });
+
+/* ---------- sound ---------- */
+function initAudio(){ try{ audio = audio || new (window.AudioContext||window.webkitAudioContext)(); if(audio.state==='suspended') audio.resume(); }catch(e){ audio = null; } }
+function tone(f1, f2, dur, type, vol, delay){
+  if(!audio || muted) return;
+  const t = audio.currentTime + (delay||0);
+  const o = audio.createOscillator(), g = audio.createGain(), lp = audio.createBiquadFilter();
+  o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t+dur);
+  lp.type = 'lowpass'; lp.frequency.value = 2400;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t+0.01); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(lp); lp.connect(g); g.connect(audio.destination); o.start(t); o.stop(t+dur+0.02);
+}
+const sfx = {
+  shoo(){ tone(rand(650,850), 260, 0.14, 'square', 0.08); tone(rand(500,650), 220, 0.1, 'square', 0.05, 0.12); },
+  fancy(){ tone(900, 1300, 0.12, 'triangle', 0.1); tone(1300, 1700, 0.12, 'triangle', 0.08, 0.1); },
+  gull(){ [0,0.16,0.32].forEach(d=>tone(980, 620, 0.12, 'sawtooth', 0.06, d)); },
+  steal(){ tone(500, 180, 0.3, 'triangle', 0.1); },
+  rescue(){ tone(400, 800, 0.15, 'triangle', 0.1); }
+};
+$('muteBtn').onclick = ()=>{ muted = !muted; $('muteBtn').textContent = muted ? 'Sound off' : 'Sound on'; $('muteBtn').setAttribute('aria-pressed', muted); };
+
+/* ---------- fries ---------- */
+function renderFries(){
+  const f = $('fries'); f.innerHTML = '';
+  for(let i=0;i<S.fries;i++){
+    const el = document.createElement('i');
+    const spread = START_FRIES>1 ? i/(START_FRIES-1) : .5;
+    el.style.left = (4 + spread*56)+'px';
+    el.style.height = (30 + ((i*7)%14))+'px';
+    el.style.transform = 'rotate('+((spread-.5)*28)+'deg)';
+    f.appendChild(el);
+  }
+  $('hFries').textContent = S.fries;
+}
+
+/* ---------- birds ---------- */
+function measure(){ const r = field.getBoundingClientRect(); W = r.width; H = r.height; }
+function plate(){ return {x:W/2, y:H-70}; }
+
+function spawn(opts){
+  opts = opts || {};
+  const t = Math.min(1, S.elapsed / GAME_SECONDS);
+  const scale = Math.max(0.85, Math.min(1.4, W/400));
+  const fromLeft = Math.random() < .5;
+  const gull = opts.gull || (S.elapsed > 8 && Math.random() < 0.17);
+  const hat = !gull && Math.random() < 0.16 ? pick(Object.keys(HATS)) : '';
+  const b = {type: gull?'gull':'pigeon', hat, state: gull?'cross':'walk',
+    x: fromLeft ? -40 : W+40,
+    y: opts.flock ? rand(H*.22, H*.85) : gull ? rand(H*.3, H*.62) : rand(H*.28, H*.72),
+    speed: (opts.flock ? rand(55, 120) : gull ? 60 : 38 + 52*t + rand(-6,10)) * scale, vx:0, vy:0, dir: fromLeft?1:-1};
+  const el = document.createElement('div');
+  el.className = 'bird walk' + (b.dir<0?' left':'');
+  el.innerHTML = '<div class="flip"><svg viewBox="-5 -18 95 88" aria-hidden="true">'+(gull?gullSVG():pigeonSVG(hat))+'</svg></div><span class="say"></span>';
+  el.setAttribute('role','button');
+  el.setAttribute('aria-label', gull ? 'Seagull, do not tap' : (hat ? 'Fancy pigeon' : 'Pigeon'));
+  b.el = el; b.say = el.querySelector('.say');
+  el.addEventListener('pointerdown', e=>{ e.preventDefault(); tap(b); });
+  field.appendChild(el);
+  S.birds.push(b);
+  place(b);
+  if(gull && !opts.flock){
+    if(!S.gullIntro){
+      S.gullIntro = true;
+      speak(b, "Hi! I'm friendly :)", 2400);
+      shout("Seagulls are friendly. Let them be.");
+    } else if(Math.random() < .4){
+      speak(b, pick(GULL_HELLO), 1500);
+    }
+  }
+}
+
+function place(b){
+  b.el.style.transform = 'translate3d('+(b.x-38)+'px,'+(b.y-48)+'px,0)';
+  b.el.style.zIndex = Math.round(b.y);
+}
+function face(b, d){ b.dir = d; b.el.classList.toggle('left', d<0); }
+function speak(b, text, ms){
+  b.say.textContent = text; b.say.classList.add('show');
+  clearTimeout(b.sayT); b.sayT = setTimeout(()=>b.say.classList.remove('show'), ms || 1000);
+}
+function shout(text){
+  banner.textContent = text; banner.classList.add('show');
+  clearTimeout(shout.t); shout.t = setTimeout(()=>banner.classList.remove('show'), 1100);
+}
+function flyAway(b){
+  b.state = 'flee';
+  b.el.classList.remove('walk','hasfry'); b.el.classList.add('fly');
+  const d = b.x < W/2 ? -1 : 1; face(b, d);
+  b.vx = d * rand(160, 260); b.vy = -rand(260, 360);
+}
+
+function tap(b){
+  if(S.phase!=='play' || S.paused) return;
+  if(b.state==='flee') return;
+  if(b.type==='gull'){
+    S.combo = 0; sfx.gull();
+    if(!S.gullWarned){
+      S.gullWarned = true;
+      speak(b, "We're friendly! Next tap costs points", 2000);
+      shout("Free pass. Next seagull tap is minus 15.");
+    } else {
+      S.score -= 15; S.gull++;
+      speak(b, pick(GULL), 1400);
+      const n = Math.min(Math.pow(2, S.gull), 64);   // 2, 4, 8, 16, 32, 64...
+      S.gullQueue += n; S.summoned += n;
+      shout(GULL_BANNERS[Math.min(S.gull-1, GULL_BANNERS.length-1)] + ' +' + n);
+    }
+    b.speed *= 1.25;
+  } else if(b.state==='thief'){
+    S.fries = Math.min(START_FRIES, S.fries+1); S.rescue++; S.score += 15;
+    renderFries(); speak(b, pick(RESCUE)); sfx.rescue(); flyAway(b);
+    countCombo();
+  } else {
+    const pts = b.hat ? 25 : 10;
+    S.score += pts; S.shoo++; if(b.hat) S.fancy++;
+    speak(b, b.hat ? pick(FANCY) : pick(SQUAWKS));
+    b.hat ? sfx.fancy() : sfx.shoo();
+    flyAway(b);
+    countCombo();
+  }
+  $('hScore').textContent = S.score;
+}
+function countCombo(){
+  const now = S.elapsed;
+  S.combo = (now - S.lastShoo < 1.4) ? S.combo + 1 : 1;
+  S.lastShoo = now;
+  if(COMBO[S.combo]) shout(COMBO[S.combo]);
+}
+
+function step(dt){
+  S.elapsed += dt;
+  S.time = Math.max(0, GAME_SECONDS - S.elapsed);
+  $('hTime').textContent = Math.ceil(S.time);
+  const t = Math.min(1, S.elapsed / GAME_SECONDS);
+  S.nextSpawn -= dt;
+  if(S.nextSpawn <= 0){
+    spawn();
+    if(t > .5 && Math.random() < .25) spawn();
+    S.nextSpawn = rand(1.25 - .65*t, 1.6 - .75*t);
+  }
+  // Release summoned seagulls in a stream, capped on screen so phones don't choke
+  if(S.gullQueue > 0){
+    S.queueT -= dt;
+    const onScreen = S.birds.filter(b=>b.type==='gull' && b.state!=='flee').length;
+    while(S.gullQueue > 0 && S.queueT <= 0 && onScreen < 50){
+      spawn({gull:true, flock:true}); S.gullQueue--; S.queueT += 0.08;
+    }
+  } else S.queueT = 0;
+  const p = plate();
+  for(const b of S.birds){
+    if(b.state==='walk'){
+      const dx = p.x - b.x, dy = p.y - b.y, dist = Math.hypot(dx, dy);
+      if(dist < 34){
+        b.state = 'thief'; S.fries--; S.stolen++; S.combo = 0;
+        renderFries(); sfx.steal(); speak(b, pick(THIEF));
+        carton.classList.remove('hit'); void carton.offsetWidth; carton.classList.add('hit');
+        b.el.classList.add('hasfry');
+        face(b, b.x < p.x ? -1 : 1);
+        b.vx = b.dir * b.speed * 1.7;
+        if(S.fries <= 0){ endGame('fries'); return; }
+      } else {
+        b.x += dx/dist * b.speed * dt; b.y += dy/dist * b.speed * dt;
+        const d = dx < 0 ? -1 : 1; if(d !== b.dir) face(b, d);
+      }
+    } else if(b.state==='thief'){
+      b.x += b.vx * dt;
+    } else if(b.state==='cross'){
+      b.x += b.dir * b.speed * dt;
+    } else if(b.state==='flee'){
+      b.x += b.vx * dt; b.y += b.vy * dt; b.vy -= 120*dt;
+    }
+    place(b);
+  }
+  S.birds = S.birds.filter(b=>{
+    const gone = b.x < -90 || b.x > W+90 || b.y < -120;
+    if(gone) b.el.remove();
+    return !gone;
+  });
+  if(S.time <= 0) endGame('time');
+}
+
+function loop(ts){
+  if(S.phase!=='play'){ return; }
+  if(!S.paused){
+    const dt = S.last ? Math.min(0.05, (ts - S.last)/1000) : 0;
+    step(dt);
+  }
+  S.last = ts;
+  raf = requestAnimationFrame(loop);
+}
+
+function start(){
+  const pre = S.pre; clearField(); reset(); S.pre = pre;
+  initAudio();
+  show('play'); measure(); renderFries();
+  $('hScore').textContent = 0; $('hTime').textContent = GAME_SECONDS;
+  S.phase = 'play'; S.paused = true;
+  overlay.innerHTML = '<h2>Here they come…</h2><p>Guard the fries.</p>'; overlay.hidden = false;
+  setTimeout(()=>{ overlay.hidden = true; S.paused = false; S.last = 0; }, 1300);
+  raf = requestAnimationFrame(loop);
+}
+function clearField(){ field.querySelectorAll('.bird').forEach(el=>el.remove()); }
+
+function endGame(reason){
+  if(S.phase!=='play') return;
+  S.phase = 'done'; S.reason = reason; cancelAnimationFrame(raf);
+  overlay.innerHTML = reason==='fries'
+    ? '<h2>The pigeons won.</h2><p>They are having a lovely time with your fries.</p>'
+    : '<h2>Time!</h2><p>You saved '+S.fries+' of '+START_FRIES+' fries.</p>';
+  overlay.hidden = false;
+  setTimeout(()=>{
+    overlay.hidden = true; clearField();
+    S.post = null; $('seeBtn').disabled = true;
+    buildFeel($('feelPost'), v=>{ S.post = v; $('seeBtn').disabled = false; });
+    show('after');
+  }, 1900);
+}
+
+function rankFor(){
+  if(S.gull >= 3) return ['Seagull Magnet', 'You brought out '+S.summoned+' seagulls. They think you just really wanted to meet them.'];
+  if(S.reason==='fries') return ['Snack Donor', 'The pigeons will remember your generosity. They will also be back tomorrow.'];
+  if(S.fries===START_FRIES && S.gull===0) return ['Fry Monarch', 'Not one fry lost and every seagull respected. Flawless.'];
+  if(S.fries===START_FRIES) return ['Fry Guardian', 'Every fry saved. A few seagulls got poked, but they forgive you.'];
+  if(S.fries>=7) return ['Boardwalk Bouncer', 'A few losses, but the box is still yours.'];
+  if(S.fries>=4) return ['Pigeon Diplomat', 'You and the pigeons reached a fair trade agreement.'];
+  return ['Fry Philanthropist', 'Technically you fed the wildlife. That counts for something.'];
+}
+
+function results(){
+  show('results');
+  const [rank, line] = rankFor();
+  $('rRank').textContent = rank; $('rRankLine').textContent = line;
+  $('rScore').textContent = S.score; $('rFries').textContent = S.fries+'/'+START_FRIES;
+  $('rShoo').textContent = S.shoo; $('rFancy').textContent = S.fancy;
+  $('rRescue').textContent = S.rescue; $('rGull').textContent = S.gull;
+  $('rSummon').textContent = S.summoned ? S.summoned+' friendly seagulls came to say hi.' : (S.gullWarned ? 'Used your free pass.' : 'Model citizen.');
+  let f = 'You said you feel '+FEELS[S.post-1].toLowerCase()+'.';
+  if(S.pre){
+    const d = S.post - S.pre;
+    f = 'You started at '+FEELS[S.pre-1].toLowerCase()+' and ended at '+FEELS[S.post-1].toLowerCase()+'. ';
+    f += d>0 ? 'That is '+d+' step'+(d>1?'s':'')+' better.' : d<0 ? 'A bit more tense than before. The pigeons may be to blame.' : 'No change this time.';
+  }
+  $('rFeel').textContent = f;
+  saveHist();
+}
+
+function saveHist(){
+  let h = [];
+  try{ h = JSON.parse(localStorage.getItem('pigeonpanic-hist')||'[]'); }catch(e){ h = []; }
+  h.unshift({d:new Date().toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}),
+    s:S.score, f:S.fries, pre:S.pre, post:S.post});
+  h = h.slice(0,5);
+  try{ localStorage.setItem('pigeonpanic-hist', JSON.stringify(h)); }catch(e){}
+  if(h.length > 1){
+    $('histWrap').hidden = false;
+    $('hist').innerHTML = h.map(x=>'<div><span>'+x.d+'</span><span>'+x.s+' pts · '+x.f+' fries · '+(x.pre?x.pre+'→':'')+x.post+'/5</span></div>').join('');
+  } else $('histWrap').hidden = true;
+}
+
+$('startBtn').onclick = start;
+$('skipBtn').onclick = ()=>{ S.pre = null; start(); };
+$('seeBtn').onclick = results;
+$('againBtn').onclick = ()=>{ S.pre = null; reset(); buildFeel($('feelPre'), v=>{ S.pre=v; }); show('intro'); };
+window.addEventListener('resize', ()=>{ if(S.phase==='play') measure(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(S.phase!=='play') return;
+  if(document.hidden){ S.paused = true; }
+  else {
+    overlay.innerHTML = '<h2>Welcome back.</h2><p>The pigeons politely waited.</p>'; overlay.hidden = false;
+    setTimeout(()=>{ overlay.hidden = true; S.paused = false; S.last = 0; }, 1200);
+  }
+});
+})();
+</script>
+</body>
+</html>
